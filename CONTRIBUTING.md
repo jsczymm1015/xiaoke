@@ -26,3 +26,5 @@ python3 Tests/test_cli.py                   # 只运行 CLI 测试
 首次公开版保留旧 bundle ID、存档目录与部分 Codable 字段名（例如 codexTaskReminders），避免破坏旧用户数据；UI 品牌与统一事件类型已改为小可 / Agent。这些内部兼容字段不限制适配器来源。
 
 提交新适配器请包含真实边界说明；模拟测试通过不能写成真实厂商端到端验证。建议先开 Issue 描述协议映射，再发 PR。
+
+重建统一人物素材：另行安装 Pillow 后运行 `python3 scripts/pack_unified_art.py`。日常编译/运行不依赖 Pillow。每个动作周期使用同一等比系数，不按坐姿总高度放大人物。

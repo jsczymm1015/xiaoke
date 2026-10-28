@@ -64,41 +64,6 @@ final class SpriteAtlas {
             writingFrames = nil
             sleepingFrames = nil
         }
-        // Social source sheets use a much larger chibi head than the base art.
-        // Normalize at load time: keep crown/floor and normal head width, then
-        // distribute the remaining height through the torso/legs. A continuous
-        // scanline mapping avoids a seam at the neck and is cached in the atlas.
-        func socialFrame(_ crop: CGImage, fit: CGFloat, neck: CGFloat) -> NSImage {
-            guard fit < 1 else { return NSImage(cgImage: crop, size: NSSize(width: 192, height: 208)) }
-            // CGImage crops from PNGs are lazy. Materialize once before scanline
-            // sampling, otherwise every strip can decode the entire source atlas.
-            guard let bitmap = CGContext(data: nil, width: 192, height: 208, bitsPerComponent: 8,
-                                         bytesPerRow: 192 * 4, space: CGColorSpaceCreateDeviceRGB(),
-                                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
-                return NSImage(cgImage: crop, size: NSSize(width: 192, height: 208))
-            }
-            bitmap.draw(crop, in: CGRect(x: 0, y: 0, width: 192, height: 208))
-            let source = NSImage(cgImage: bitmap.makeImage()!, size: NSSize(width: 192, height: 208))
-            let normalized = NSImage(size: NSSize(width: 192, height: 208), flipped: true) { _ in
-                let top: CGFloat = 7, floor: CGFloat = 203
-                let fittedNeck = top + (neck - top) * fit
-                func destination(_ y: CGFloat) -> CGFloat {
-                    if y <= neck { return top + (y - top) * fit }
-                    return fittedNeck + (y - neck) * (floor - fittedNeck) / (floor - neck)
-                }
-                for row in 0..<208 {
-                    let y = CGFloat(row), next = destination(y + 1)
-                    source.draw(in: NSRect(x: 96 * (1 - fit), y: destination(y),
-                                           width: 192 * fit, height: next - destination(y)),
-                                from: NSRect(x: 0, y: 207 - y, width: 192, height: 1),
-                                operation: .sourceOver, fraction: 1, respectFlipped: true,
-                                hints: [.interpolation: NSImageInterpolation.high])
-                }
-                return true
-            }
-            guard let rendered = normalized.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return source }
-            return NSImage(cgImage: rendered, size: NSSize(width: 192, height: 208))
-        }
         let lifeURL = url.deletingLastPathComponent()
             .appendingPathComponent(url.deletingPathExtension().lastPathComponent + "-life.png")
         if FileManager.default.fileExists(atPath: lifeURL.path) {
@@ -109,9 +74,8 @@ final class SpriteAtlas {
             }
             lifeFrames = Dictionary(uniqueKeysWithValues: Self.lifeRows.enumerated().map { row, name in
                 (name, (0..<6).map { column in
-                    socialFrame(cg.cropping(to: CGRect(x: column * 192, y: row * 208, width: 192, height: 208))!,
-                                fit: row < 5 ? 1 : (row == 9 ? 0.65 : (row == 8 ? 0.70 : 0.72)),
-                                neck: row >= 8 ? 116 : 108)
+                    NSImage(cgImage: cg.cropping(to: CGRect(x: column * 192, y: row * 208, width: 192, height: 208))!,
+                            size: NSSize(width: 192, height: 208))
                 })
             })
         } else { lifeFrames = [:] }
@@ -125,8 +89,8 @@ final class SpriteAtlas {
             }
             foodFrames = Dictionary(uniqueKeysWithValues: Self.foodRows.enumerated().map { row, name in
                 (name, (0..<6).map { column in
-                    socialFrame(cg.cropping(to: CGRect(x: column * 192, y: row * 208, width: 192, height: 208))!,
-                                fit: 0.72, neck: 108)
+                    NSImage(cgImage: cg.cropping(to: CGRect(x: column * 192, y: row * 208, width: 192, height: 208))!,
+                            size: NSSize(width: 192, height: 208))
                 })
             })
         } else { foodFrames = [:] }
@@ -526,15 +490,13 @@ final class SpriteCanvas: NSView {
         var rect = petRect
         let elapsed = max(0, clock().timeIntervalSince(animationStartedAt))
         if isCarried {
-            // Keep even the lifted sprite beneath the task-bubble region.
-            rect = rect.insetBy(dx: 3 * scale, dy: 3 * scale)
-            rect.origin.x += sin(elapsed * 5) * 2.5 * scale
+            // Translate only: picking up must never shrink, stretch or zoom.
+            rect.origin.x += sin(elapsed * 4) * 1.2 * scale
         } else if animationName == "dodge" {
             rect.origin.x += sin(min(1, elapsed / 1.8) * .pi) * 14 * scale
         } else if lifeAnimation == "land" && elapsed < 0.5 {
-            let squash = sin(elapsed / 0.5 * .pi) * 5 * scale
-            rect.origin.y += squash
-            rect.size.height -= squash
+            // Landing uses its own consistently sized art, without body squash.
+            rect.origin.y += sin(elapsed / 0.5 * .pi) * 1.5 * scale
         } else if animationName == "touch-face" {
             rect.origin.x += sin(elapsed * 5) * 1.2 * scale
         }
@@ -707,13 +669,13 @@ final class SpriteCanvas: NSView {
         guard pressedTouchZone != nil else { return }
         wakeForInteraction()
         if event.clickCount == 2 { onDoubleClick?(); return }
-        dragOrigin = NSEvent.mouseLocation
+        dragOrigin = window?.convertPoint(toScreen: event.locationInWindow) ?? NSEvent.mouseLocation
         initialWindowOrigin = window?.frame.origin
         wasDragged = false
     }
     override func mouseDragged(with event: NSEvent) {
         guard let start = dragOrigin, let origin = initialWindowOrigin, let w = window else { return }
-        let p = NSEvent.mouseLocation
+        let p = w.convertPoint(toScreen: event.locationInWindow)
         let dx = p.x - start.x, dy = p.y - start.y
         if hypot(dx, dy) > 4 { wasDragged = true }
         if wasDragged {

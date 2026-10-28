@@ -335,6 +335,38 @@ struct CanvasTests {
             try expect(canvas.currentImage === normal, "Real book click keeps exact normal/work artwork")
         }
         canvas.onTouchZone = nil
+        let dragPoint = canvas.convert(NSPoint(x: canvas.petRect.midX, y: canvas.petRect.minY + 120), to: nil)
+        func dragEvent(_ type: NSEvent.EventType, _ point: NSPoint) -> NSEvent {
+            NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 20, clickCount: 1, pressure: 1)!
+        }
+        canvas.mouseDown(with: dragEvent(.leftMouseDown, dragPoint))
+        canvas.mouseDragged(with: dragEvent(.leftMouseDragged, NSPoint(x: dragPoint.x + 30, y: dragPoint.y)))
+        try expect(canvas.isCarried && canvas.lifeAnimation == "carry", "Queued mouse drag uses event coordinates, not the later global cursor position")
+        canvas.mouseUp(with: dragEvent(.leftMouseUp, dragPoint))
+        try expect(!canvas.isCarried && canvas.lifeAnimation == "land", "Real release routes from carry to landing")
+        // Every transition must preserve the user's exact scale and render size.
+        // Artwork changes pose; the renderer never stretches or zooms the body.
+        for userScale: CGFloat in [0.6, 1.0, 1.8] {
+            canvas.scale = userScale
+            canvas.frame.size = NSSize(width: 400, height: 500)
+            let expectedSize = canvas.petRect.size
+            for _ in 0..<3 {
+                canvas.beginCarrying()
+                try expect(canvas.animatedPetRect.size == expectedSize && canvas.scale == userScale,
+                           "Holding/dragging must preserve size at every user scale")
+                canvas.finishCarrying()
+                try expect(canvas.animatedPetRect.size == expectedSize && canvas.scale == userScale,
+                           "Release must never squash or enlarge the character")
+                for action in ["drink-milk", "eat-riceBall", "page-flip", "groom", "touch-book", "running", "idle"] {
+                    canvas.play(action, duration: 1)
+                    try expect(canvas.animatedPetRect.size == expectedSize && canvas.scale == userScale,
+                               "Post-release actions cannot inherit a scale change: " + action)
+                }
+            }
+        }
+        canvas.scale = 1
+        canvas.frame.size = NSSize(width: 264, height: 296)
         canvas.focused = true
         canvas.play("running", duration: 0.2)
         _ = try capture("l3d-writing")
