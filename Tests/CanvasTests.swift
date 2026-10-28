@@ -166,7 +166,7 @@ struct CanvasTests {
         try expect(lifeCanvas.touchZone(at: NSPoint(x: pr.midX, y: pr.minY + 118)) == "book", "The book has its own touch zone")
         try expect(lifeCanvas.touchZone(at: NSPoint(x: pr.minX + 5, y: pr.minY + 70)) == nil, "Transparent side margins must not reward touch")
         lifeCanvas.play("touch-book")
-        try expect(lifeCanvas.lifeAnimation == "page-flip", "Touching the book must flip a page rather than reuse face touching")
+        try expect(lifeCanvas.lifeAnimation == "touch", "Touching the book preserves normal artwork; ambient page flips remain separate")
         lifeCanvas.play("sleeping", duration: 1)
         try expect(lifeCanvas.touchZone(at: NSPoint(x: pr.midX, y: pr.minY + 110)) == "face", "Sleeping touch regions must follow the bowed head")
         lifeNow += 1.1; lifeCanvas.advance()
@@ -315,7 +315,28 @@ struct CanvasTests {
         canvas.play("running", duration: 0.2)
         canvas.scale = 1
         canvas.frame.size = NSSize(width: 264, height: 296)
+        canvas.codexTasks = []
+        var clickedZone: String?
+        canvas.onTouchZone = { zone in
+            clickedZone = zone
+            canvas.play("touch-" + zone, duration: 2.5) // Same request sent by the store.
+        }
+        for working in [false, true] {
+            canvas.focused = working
+            canvas.play(working ? "running" : "idle", duration: 1)
+            let point = canvas.convert(NSPoint(x: canvas.petRect.midX, y: canvas.petRect.minY + 120), to: nil)
+            let down = NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 10, clickCount: 1, pressure: 1)!
+            let up = NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 11, clickCount: 1, pressure: 0)!
+            canvas.mouseDown(with: down); canvas.mouseUp(with: up)
+            try expect(clickedZone == "book" && canvas.lifeAnimation == "touch", "Book hit region must not route to the oversized page-flip sheet")
+            let normal = working ? librarian.writingFrames![0] : librarian.frames[SpriteState.idle.row][0]
+            try expect(canvas.currentImage === normal, "Real book click keeps exact normal/work artwork")
+        }
+        canvas.onTouchZone = nil
         canvas.focused = true
+        canvas.play("running", duration: 0.2)
         _ = try capture("l3d-writing")
         canvas.focused = false
         canvas.codexTasks = []

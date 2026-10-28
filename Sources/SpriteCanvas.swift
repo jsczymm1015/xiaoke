@@ -311,7 +311,6 @@ final class SpriteCanvas: NSView {
         let key: String?
         if name.hasPrefix("eat-") { key = "eat" }
         else if name.hasPrefix("drink-") { key = "drink" }
-        else if name == "touch-book" { key = "page-flip" }
         else if name.hasPrefix("touch-") || name == "dodge" { key = "touch" }
         else { key = SpriteAtlas.lifeRows.contains(name) ? name : nil }
         lifeAnimation = key

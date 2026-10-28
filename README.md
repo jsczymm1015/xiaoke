@@ -6,7 +6,7 @@
 
 [下载安装包](https://github.com/jsczymm1015/xiaoke/releases/latest) · [详细安装](docs/INSTALL.md) · [Agent 接入](docs/AGENTS.md) · [贡献指南](CONTRIBUTING.md)
 
-> 当前版本：0.3.0。支持 **Apple Silicon Mac / macOS 13+**。Windows、Linux、Intel Mac 暂未提供发布包。应用使用本地临时签名，**尚未经过 Apple Developer ID 签名或公证**。
+> 当前版本：0.3.1。支持 **Apple Silicon Mac / macOS 13+**。Windows、Linux、Intel Mac 暂未提供发布包。应用使用本地临时签名，**尚未经过 Apple Developer ID 签名或公证**。
 
 ## 看看小可
 
@@ -24,7 +24,7 @@
 
 ## 安装：不需要编译
 
-1. 到 [Releases](https://github.com/jsczymm1015/xiaoke/releases/latest) 下载 `xiaoke-0.3.0-macos-arm64.zip`。
+1. 到 [Releases](https://github.com/jsczymm1015/xiaoke/releases/latest) 下载 `xiaoke-0.3.1-macos-arm64.zip`。
 2. 解压，把 **小可桌宠.app** 拖到「应用程序」。
 3. 打开小可。若 macOS 因未公证阻止打开，先确认下载来源和发布页校验值，再到「系统设置 → 隐私与安全性」按 macOS 的提示允许此应用。不要全局关闭 Gatekeeper。
 4. 双击角色打开面板；右键打开喂养、小窝、衣橱、硬件等入口。菜单栏 **「可」** 可以找回角色、恢复鼠标互动和退出。
