@@ -1,0 +1,11 @@
+.build/
+dist/
+qa/
+.DS_Store
+*.dSYM/
+__pycache__/
+*.pyc
+.claude/
+.env
+.env.*
+*.xiaoke-backup-*
